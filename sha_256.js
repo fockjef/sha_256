@@ -18,20 +18,23 @@ var SHA_256 = (function(){
     function s0  (x)    { return RotR(x, 7)^RotR(x,18)^(x>>> 3) }
     function s1  (x)    { return RotR(x,17)^RotR(x,19)^(x>>>10) }
 
-    function utf8ToAscii(s){
-        return encodeURI(s).replace(/%([0-9A-F]{2})/g,function(m,p){return String.fromCharCode('0x'+p)});
-    }
+    function utf8ToAscii(s){return unescape(encodeURI(s))}
+    function toByteArray(H){return new Uint8Array(H.reverse().buffer).reverse()}
+    function toBin(b){return String.fromCharCode.apply(null,b)}
+    function toHex(b){return Array.prototype.slice.call(b).map(function(x){return (x|0x100).toString(16).substr(1)}).join("")}
+    function toB64(b){return btoa(String.fromCharCode.apply(null,b))}
 
     function hash(msg){
         var H = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
 
         msg = utf8ToAscii(msg);
         var N = Math.ceil((msg.length+9)/64),
-            M = new Uint32Array(N*16);
-        for( var i = 0; i < msg.length; i++ ) M[i>>>2] |= msg.charCodeAt(i)<<(8*(3-(i&3)));
-        M[i>>>2] |= 0x80<<(8*(3-(i&3)));
-        M[M.length-2] = (msg.length*8)/0x100000000;
-        M[M.length-1] = (msg.length*8)&0xffffffff;
+            b = new Uint8Array(N*64);
+        for( var i = 0, j = b.length-1; i < msg.length; i++, j-- ) b[j] = msg.charCodeAt(i);
+        b[j] = 0x80;
+        var M = new Uint32Array(b.buffer).reverse();
+        M[M.length-1] = (msg.length&0x1fffffff)<<3;
+        M[M.length-2] = msg.length/0x20000000;
 
         for( var i = 0; i < N; i++ ){
             var W = new Uint32Array(64), a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7], T1, T2;
@@ -51,12 +54,13 @@ var SHA_256 = (function(){
             }
             H[0] += a; H[1] += b; H[2] += c; H[3] += d; H[4] += e; H[5] += f; H[6] += g; H[7] += h;
         }
-        return [].slice.call(H).map(function(x){return String.fromCharCode((x>>24)&0xff,(x>>16)&0xff,(x>>8)&0xff,x&0xff)}).join("");
+        return toByteArray(H);
     }
 
     return {
-        hash : hash,
-        hash_hex : function(msg){ return hash(msg).split("").map(function(x){return (x.charCodeAt()|256).toString(16).slice(-2)}).join("") },
-        hash_b64 : function(msg){ return btoa(hash(msg)) }
+        hash    : hash,
+        hash_bin: function(msg){ return toBin(hash(msg))},
+        hash_hex: function(msg){ return toHex(hash(msg))},
+        hash_b64: function(msg){ return toB64(hash(msg))}
     };
 })();
