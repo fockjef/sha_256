@@ -1,6 +1,6 @@
 var SHA_256 = (function(){
-	
-	// polyfill for reversing typed arrays
+
+    // polyfill for reversing typed arrays
     if( !Uint8Array.prototype.reverse ){
         Uint8Array.prototype.reverse = Uint32Array.prototype.reverse = function(){
             for( var i = 0; i < this.length/2; i++ ){
